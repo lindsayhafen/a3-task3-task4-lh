@@ -1,0 +1,105 @@
+---
+title: "a3_task4_lindsay_hafen.Rmd"
+author: "Lindsay Hafen"
+date: "11/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(janitor)
+library(kableExtra)
+library(lubridate)
+```
+
+## Read in data and clean
+- Use here and janitor
+
+```{r}
+urchins <- read_csv(here("data", "urchins.csv")) %>% 
+  clean_names()
+```
+
+
+## Examine Naples Reef purple urchin data for january 2010
+- Use lubridate to create a new year column and a new month column.
+- Filter data to include data from NAPL in January 2010 for the purple urchin
+
+```{r}
+napl_urchins <- urchins %>% 
+  mutate(date = mdy(date),
+         year = year(date),
+         month = month(date)) %>% 
+  filter(common_name == "Purple Urchin",
+         site == "NAPL",
+         year == 2010,
+         month == 1) 
+```
+
+### Create a histogram plot 
+- Compare control (no kelp removal) to the annual (kelp removal) group
+- Use facet wrap to show the two samples next to each other
+
+```{r, message=FALSE, warning=FALSE}
+ggplot(napl_urchins, aes(x = size)) +
+  geom_histogram(aes(color = treatment))+
+  facet_wrap(~treatment) +
+  labs(x = "Urchin size (cm)", title = "Urchin size comparisons for Naples Reef populations in January 2010", y = "Number of urchins")
+```
+- Size comparison of urchin populations at Naples Reef environments that had kelp removed annually (ANNUAL) and populations at Naples Reef that did not have an annual removal of kelp from their environment (CONTROL)
+
+
+#### Create a QQ plot for additional visualization of the relationship between the two samples
+
+```{r}
+ggplot(napl_urchins, aes(sample = size)) +
+  geom_qq(aes(color = treatment)) +
+  facet_wrap(~treatment)
+```
+
+- It is difficult to see any major differences in the population sizes based on the graphs. It is possible that the control (no kelp removal) population has slightly larger urchins than the annual group, though further analysis is required.
+
+### Create a table with summary statistics
+- Group_by treatment to examine data in the control and annual seperately
+- Summmarize data to create a table with mean, median, sd, and sample size
+- Use kableExtra for improved visualization 
+
+```{r}
+napl_summary <- napl_urchins %>% 
+  group_by(treatment) %>% 
+  summarize(average_size = mean(size, na.rm = TRUE),
+            median_size = median(size, na.rm = TRUE),
+            standard_deviation = sd(size, na.rm = TRUE),
+            sample_size = n())
+
+napl_summary %>% 
+  kbl() %>% 
+  kable_styling()
+```
+
+## Perform a 2-sample t-test
+- Create vectors that will be compatible with the t-test (Separate annual and control into two vectors)
+- Run a t-test
+
+```{r}
+napl_annual <- napl_urchins %>% 
+  filter(treatment == "ANNUAL") %>% 
+  pull(size)
+
+napl_control <- napl_urchins %>% 
+  filter(treatment == "CONTROL") %>% 
+  pull(size)
+
+t.test(x = napl_annual, y = napl_control)
+```
+
+- The 2-sample t-test shows that the probability of getting 2 sample means that are at least as different as 3.916667 - 3.725806 if the samples were drawn from the same population is 25.36%. This is a fairly high probability that the annual and the control are in fact a part of the same population, though it is still possible that the annual and control groups are from different populations. The sample size is large enough to use responsibly for statistical analysis, though a larger sample size would provide a higher resolution and yeild more confidence as a result. According to the standard deviation of each group, 95% of the population for the kelp removal treatment is found within the size range of 1.984191 cm to 5.849143 cm. 95% of the Control group population with no kelp removal is found within the size range of 1.992078 cm to 5.459536 cm. It is possible to tell by looking at the ranges alone that there is quite a bit of overlap within each population's size, but the overlap is by no means identical. 
+
+- In this case the p-value is the probability of getting 2 sample means that are at least as different as 3.916667 - 3.725806 *if* the samples were drawn from the same population. 
+
+
+
+
+
